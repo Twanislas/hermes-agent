@@ -909,6 +909,21 @@ def _build_child_agent(
 
     if toolsets:
         # Intersect with parent — subagent must not gain tools the parent lacks
+        missing_toolsets = [t for t in toolsets if t not in parent_toolsets]
+        if missing_toolsets:
+            # MCP toolsets are special — they are inherited automatically if enabled.
+            # Only raise for non-MCP toolsets that are genuinely missing.
+            actually_missing = (
+                [t for t in missing_toolsets if not _is_mcp_toolset_name(t)]
+                if _get_inherit_mcp_toolsets()
+                else missing_toolsets
+            )
+            if actually_missing:
+                raise ValueError(
+                    f"Requested toolsets {actually_missing} are not available in the parent agent. "
+                    "Use available toolsets or check your configuration."
+                )
+
         child_toolsets = [t for t in toolsets if t in parent_toolsets]
         if _get_inherit_mcp_toolsets():
             child_toolsets = _preserve_parent_mcp_toolsets(
