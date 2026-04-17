@@ -101,7 +101,7 @@ class WebhookAdapter(BasePlatformAdapter):
 
         # Rate limiting: per-route timestamps in a fixed window.
         self._rate_counts: Dict[str, List[float]] = {}
-        self._rate_limit: int = int(config.extra.get("rate_limit", 30))  # per minute
+        self._global_rate_limit: int = int(config.extra.get("rate_limit", 30))  # per minute
 
         # Body size limit (auth-before-body pattern)
         self._max_body_bytes: int = int(
@@ -313,6 +313,17 @@ class WebhookAdapter(BasePlatformAdapter):
                 {"error": "Payload too large"}, status=413
             )
 
+        # ── Rate limiting ────────────────────────────────────────
+        now = time.time()
+        route_limit = route_config.get("rate_limit", self._global_rate_limit)
+        window = self._rate_counts.setdefault(route_name, [])
+        window[:] = [t for t in window if now - t < 60]
+        if len(window) >= route_limit:
+            return web.json_response(
+                {"error": "Rate limit exceeded"}, status=429
+            )
+        window.append(now)
+
         # Read body (must be done before any validation)
         try:
             raw_body = await request.read()
@@ -331,15 +342,6 @@ class WebhookAdapter(BasePlatformAdapter):
                     {"error": "Invalid signature"}, status=401
                 )
 
-        # ── Rate limiting (after auth) ───────────────────────────
-        now = time.time()
-        window = self._rate_counts.setdefault(route_name, [])
-        window[:] = [t for t in window if now - t < 60]
-        if len(window) >= self._rate_limit:
-            return web.json_response(
-                {"error": "Rate limit exceeded"}, status=429
-            )
-        window.append(now)
 
         # Parse payload
         try:
