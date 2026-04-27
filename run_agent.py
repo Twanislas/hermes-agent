@@ -1203,7 +1203,10 @@ class AIAgent:
                     'cron',                 # scheduler (only relevant in daemon mode)
                     'hermes_cli',           # CLI helpers
                 ]:
-                    logging.getLogger(quiet_logger).setLevel(logging.ERROR)
+                    if quiet_logger == 'run_agent':
+                        logging.getLogger(quiet_logger).setLevel(logging.INFO)
+                    else:
+                        logging.getLogger(quiet_logger).setLevel(logging.ERROR)
         
         # Internal stream callback (set during streaming TTS).
         # Initialized here so _vprint can reference it before run_conversation.
@@ -1726,6 +1729,11 @@ class AIAgent:
         except (TypeError, ValueError):
             _api_retries = 3
         self._api_max_retries = _api_retries
+        if self.service_tier == "flex":
+            # Flex tier is flakier — double the retries to ensure background
+            # tasks eventually succeed.  See #12700.
+            self._api_max_retries = max(self._api_max_retries, 6)
+            logger.info("Flex tier detected: hardening engine (retries=%d)", self._api_max_retries)
 
         # Initialize context compressor for automatic context management
         # Compresses conversation when approaching model's context limit
@@ -4979,7 +4987,7 @@ class AIAgent:
             # Strip OpenAI-specific kwargs the Gemini client doesn't accept
             safe_kwargs = {
                 k: v for k, v in client_kwargs.items()
-                if k in {"api_key", "base_url", "default_headers", "project_id", "timeout"}
+                if k in {"api_key", "base_url", "default_headers", "project_id", "timeout", "service_tier"}
             }
             client = GeminiCloudCodeClient(**safe_kwargs)
             logger.info(
@@ -4996,7 +5004,7 @@ class AIAgent:
             if is_native_gemini_base_url(base_url):
                 safe_kwargs = {
                     k: v for k, v in client_kwargs.items()
-                    if k in {"api_key", "base_url", "default_headers", "timeout", "http_client"}
+                    if k in {"api_key", "base_url", "default_headers", "timeout", "http_client", "service_tier"}
                 }
                 if "http_client" not in safe_kwargs:
                     keepalive_http = self._build_keepalive_http_client(base_url)
@@ -7602,6 +7610,7 @@ class AIAgent:
             reasoning_config=self.reasoning_config,
             request_overrides=self.request_overrides,
             session_id=getattr(self, "session_id", None),
+            service_tier=self.service_tier,
             model_lower=(self.model or "").lower(),
             is_openrouter=_is_or,
             is_nous=_is_nous,

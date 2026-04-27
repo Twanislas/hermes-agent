@@ -102,6 +102,7 @@ class ChatCompletionsTransport(ProviderTransport):
             is_nvidia_nim: bool
             is_kimi: bool
             is_custom_provider: bool
+            service_tier: str | None
             ollama_num_ctx: int | None
             # Provider routing
             provider_preferences: dict | None
@@ -158,6 +159,10 @@ class ChatCompletionsTransport(ProviderTransport):
         timeout = params.get("timeout")
         if timeout is not None:
             api_kwargs["timeout"] = timeout
+
+        service_tier = params.get("service_tier")
+        if service_tier:
+            api_kwargs["service_tier"] = service_tier
 
         # Temperature
         fixed_temp = params.get("fixed_temperature")

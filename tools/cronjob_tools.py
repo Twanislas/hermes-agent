@@ -219,6 +219,8 @@ def _format_job(job: Dict[str, Any]) -> Dict[str, Any]:
         result["enabled_toolsets"] = job["enabled_toolsets"]
     if job.get("workdir"):
         result["workdir"] = job["workdir"]
+    if job.get("service_tier"):
+        result["service_tier"] = job["service_tier"]
     return result
 
 
@@ -241,6 +243,7 @@ def cronjob(
     context_from: Optional[Union[str, List[str]]] = None,
     enabled_toolsets: Optional[List[str]] = None,
     workdir: Optional[str] = None,
+    service_tier: Optional[str] = None,
     task_id: str = None,
 ) -> str:
     """Unified cron job management tool."""
@@ -293,6 +296,7 @@ def cronjob(
                 context_from=context_from,
                 enabled_toolsets=enabled_toolsets or None,
                 workdir=_normalize_optional_job_value(workdir),
+                service_tier=_normalize_optional_job_value(service_tier),
             )
             return json.dumps(
                 {
@@ -406,6 +410,8 @@ def cronjob(
                 # Empty string clears the field (restores old behaviour);
                 # otherwise pass raw — update_job() validates / normalizes.
                 updates["workdir"] = _normalize_optional_job_value(workdir) or None
+            if service_tier is not None:
+                updates["service_tier"] = _normalize_optional_job_value(service_tier) or None
             if repeat is not None:
                 # Normalize: treat 0 or negative as None (infinite)
                 normalized_repeat = None if repeat <= 0 else repeat
@@ -527,6 +533,10 @@ Important safety rule: cron-run sessions should not recursively schedule more cr
                 "type": "string",
                 "description": "Optional absolute path to run the job from. When set, AGENTS.md / CLAUDE.md / .cursorrules from that directory are injected into the system prompt, and the terminal/file/code_exec tools use it as their working directory — useful for running a job inside a specific project repo. Must be an absolute path that exists. When unset (default), preserves the original behaviour: no project context files, tools use the scheduler's cwd. On update, pass an empty string to clear. Jobs with workdir run sequentially (not parallel) to keep per-job directories isolated."
             },
+            "service_tier": {
+                "type": "string",
+                "description": "Optional service tier for the job's agent. Use 'flex' for the low-cost Gemini Flex tier."
+            },
         },
         "required": ["action"]
     }
@@ -574,6 +584,7 @@ registry.register(
         context_from=args.get("context_from"),
         enabled_toolsets=args.get("enabled_toolsets"),
         workdir=args.get("workdir"),
+        service_tier=args.get("service_tier"),
         task_id=kw.get("task_id"),
     ))(),
     check_fn=check_cronjob_requirements,

@@ -395,11 +395,15 @@ def build_gemini_request(
     top_p: Optional[float] = None,
     stop: Any = None,
     thinking_config: Any = None,
+    service_tier: Optional[str] = None,
 ) -> Dict[str, Any]:
     contents, system_instruction = _build_gemini_contents(messages)
     request: Dict[str, Any] = {"contents": contents}
     if system_instruction:
         request["systemInstruction"] = system_instruction
+
+    if service_tier:
+        request["service_tier"] = service_tier
 
     gemini_tools = _translate_tools_to_gemini(tools)
     if gemini_tools:
@@ -799,6 +803,7 @@ class GeminiNativeClient:
         default_headers: Optional[Dict[str, str]] = None,
         timeout: Any = None,
         http_client: Optional[httpx.Client] = None,
+        service_tier: Optional[str] = None,
         **_: Any,
     ) -> None:
         if not (api_key or "").strip():
@@ -809,6 +814,7 @@ class GeminiNativeClient:
                 "to configure the Google provider."
             )
         self.api_key = api_key
+        self.service_tier = service_tier
         normalized_base = (base_url or DEFAULT_GEMINI_BASE_URL).rstrip("/")
         if normalized_base.endswith("/openai"):
             normalized_base = normalized_base[: -len("/openai")]
@@ -864,6 +870,7 @@ class GeminiNativeClient:
         stop: Any = None,
         extra_body: Optional[Dict[str, Any]] = None,
         timeout: Any = None,
+        service_tier: Optional[str] = None,
         **_: Any,
     ) -> Any:
         thinking_config = None
@@ -879,6 +886,7 @@ class GeminiNativeClient:
             top_p=top_p,
             stop=stop,
             thinking_config=thinking_config,
+            service_tier=service_tier or self.service_tier,
         )
 
         if stream:

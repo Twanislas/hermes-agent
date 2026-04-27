@@ -96,6 +96,9 @@ def cron_list(show_all: bool = False):
         workdir = job.get("workdir")
         if workdir:
             print(f"    Workdir:   {workdir}")
+        tier = job.get("service_tier")
+        if tier:
+            print(f"    Tier:      {tier}")
 
         # Execution history
         last_status = job.get("last_status")
@@ -168,6 +171,7 @@ def cron_create(args):
         name=getattr(args, "name", None),
         deliver=getattr(args, "deliver", None),
         repeat=getattr(args, "repeat", None),
+        service_tier=getattr(args, "service_tier", None),
         skill=getattr(args, "skill", None),
         skills=_normalize_skills(getattr(args, "skill", None), getattr(args, "skills", None)),
         script=getattr(args, "script", None),
@@ -222,6 +226,7 @@ def cron_edit(args):
         name=getattr(args, "name", None),
         deliver=getattr(args, "deliver", None),
         repeat=getattr(args, "repeat", None),
+        service_tier=getattr(args, "service_tier", None),
         skills=final_skills,
         script=getattr(args, "script", None),
         workdir=getattr(args, "workdir", None),
@@ -242,6 +247,8 @@ def cron_edit(args):
         print(f"  Script: {updated['script']}")
     if updated.get("workdir"):
         print(f"  Workdir: {updated['workdir']}")
+    if updated.get("service_tier"):
+        print(f"  Service Tier: {updated['service_tier']}")
     return 0
 
 

@@ -426,6 +426,7 @@ def create_job(
     context_from: Optional[Union[str, List[str]]] = None,
     enabled_toolsets: Optional[List[str]] = None,
     workdir: Optional[str] = None,
+    service_tier: Optional[str] = None,
 ) -> Dict[str, Any]:
     """
     Create a new cron job.
@@ -457,6 +458,7 @@ def create_job(
                 terminal/file/code_exec tools use it as their working directory
                 (via TERMINAL_CWD).  When unset, the old behaviour is preserved
                 (no context files injected, tools use the scheduler's cwd).
+        service_tier: Optional per-job service tier (e.g. "flex" for Gemini).
 
     Returns:
         The created job dict
@@ -490,6 +492,8 @@ def create_job(
     normalized_toolsets = [str(t).strip() for t in enabled_toolsets if str(t).strip()] if enabled_toolsets else None
     normalized_toolsets = normalized_toolsets or None
     normalized_workdir = _normalize_workdir(workdir)
+    normalized_service_tier = str(service_tier).strip() if isinstance(service_tier, str) else None
+    normalized_service_tier = normalized_service_tier or None
 
     # Normalize context_from: accept str or list of str, store as list or None
     if isinstance(context_from, str):
@@ -509,6 +513,7 @@ def create_job(
         "model": normalized_model,
         "provider": normalized_provider,
         "base_url": normalized_base_url,
+        "service_tier": normalized_service_tier,
         "script": normalized_script,
         "context_from": context_from,
         "schedule": parsed_schedule,

@@ -264,6 +264,7 @@ def build_gemini_request(
     top_p: Optional[float] = None,
     stop: Any = None,
     thinking_config: Any = None,
+    service_tier: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Build the inner Gemini request body (goes inside ``request`` wrapper)."""
     contents, system_instruction = _build_gemini_contents(messages)
@@ -271,6 +272,9 @@ def build_gemini_request(
     body: Dict[str, Any] = {"contents": contents}
     if system_instruction is not None:
         body["systemInstruction"] = system_instruction
+
+    if service_tier:
+        body["service_tier"] = service_tier
 
     gemini_tools = _translate_tools_to_gemini(tools)
     if gemini_tools:
@@ -594,6 +598,7 @@ class GeminiCloudCodeClient:
         base_url: Optional[str] = None,
         default_headers: Optional[Dict[str, str]] = None,
         project_id: str = "",
+        service_tier: Optional[str] = None,
         **_: Any,
     ):
         # `api_key` here is a dummy — real auth is the OAuth access token
@@ -602,6 +607,7 @@ class GeminiCloudCodeClient:
         self.api_key = api_key or "google-oauth"
         self.base_url = base_url or MARKER_BASE_URL
         self._default_headers = dict(default_headers or {})
+        self.service_tier = service_tier
         self._configured_project_id = project_id
         self._project_context: Optional[ProjectContext] = None
         self._project_context_lock = False  # simple single-thread guard
@@ -672,6 +678,7 @@ class GeminiCloudCodeClient:
         stop: Any = None,
         extra_body: Optional[Dict[str, Any]] = None,
         timeout: Any = None,
+        service_tier: Optional[str] = None,
         **_: Any,
     ) -> Any:
         access_token = google_oauth.get_valid_access_token()
@@ -690,6 +697,7 @@ class GeminiCloudCodeClient:
             top_p=top_p,
             stop=stop,
             thinking_config=thinking_config,
+            service_tier=service_tier or self.service_tier,
         )
         wrapped = wrap_code_assist_request(
             project_id=ctx.project_id,
